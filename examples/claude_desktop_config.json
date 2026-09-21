@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "tuya-local": {
+      "command": "/absolute/path/to/.venv/bin/python",
+      "args": ["-m", "tuya_local_mcp"],
+      "env": {
+        "TUYA_DEVICES_FILE": "/absolute/path/to/devices.json",
+        "TUYA_READ_ONLY": "0",
+        "TUYA_CONNECT_TIMEOUT": "5",
+        "TUYA_CACHE_TTL": "10",
+        "TUYA_DISCOVERY_TIMEOUT": "12"
+      }
+    }
+  }
+}

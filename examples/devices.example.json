@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Living Room Lamp",
+    "id": "bf0000000000000000aaaa",
+    "key": "REDACTED16CHARKEY",
+    "category": "dj",
+    "product_name": "RGBCW Bulb",
+    "version": "3.3",
+    "ip": "192.168.1.50"
+  },
+  {
+    "name": "Desk Plug",
+    "id": "bf0000000000000000bbbb",
+    "key": "REDACTED16CHARKEY",
+    "category": "cz",
+    "product_name": "Smart Plug",
+    "version": "3.4",
+    "ip": "192.168.1.51"
+  }
+]
