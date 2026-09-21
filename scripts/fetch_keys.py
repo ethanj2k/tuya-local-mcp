@@ -8,7 +8,7 @@ merges in LAN addresses from a passive scan.
 
     TUYA_API_KEY        Access ID       from iot.tuya.com -> project -> Overview
     TUYA_API_SECRET     Access Secret   same place
-    TUYA_API_REGION     one of: cn us us-e eu eu-w in
+    TUYA_API_REGION     data centre code, see REGIONS below
     TUYA_API_DEVICE_ID  any device's Virtual ID, from the Smart Life app
 
 Usage:
@@ -27,7 +27,24 @@ import sys
 from pathlib import Path
 
 REQUIRED = ("TUYA_API_KEY", "TUYA_API_SECRET", "TUYA_API_REGION", "TUYA_API_DEVICE_ID")
-VALID_REGIONS = {"cn", "us", "us-e", "eu", "eu-w", "in"}
+
+# Mirrors tinytuya.Cloud.setregion, including its short aliases. The region must
+# match the data centre your *app account* lives in, which is decided by the
+# country you registered in - not by where you happen to be now. A mismatch
+# returns an empty device list rather than an error, because data centres are
+# isolated from one another.
+REGIONS = {
+    "cn": "China",
+    "us": "Western America",
+    "az": "Western America (alias)",
+    "us-e": "Eastern America",
+    "ue": "Eastern America (alias)",
+    "eu": "Central Europe",
+    "eu-w": "Western Europe",
+    "we": "Western Europe (alias)",
+    "in": "India",
+    "sg": "Singapore",
+}
 
 
 def load_dotenv(path: Path) -> None:
@@ -59,14 +76,16 @@ def main() -> int:
         return 2
 
     region = os.environ["TUYA_API_REGION"].strip().lower()
-    if region not in VALID_REGIONS:
-        print(f"TUYA_API_REGION must be one of {sorted(VALID_REGIONS)}, got {region!r}",
+    if region not in REGIONS:
+        print(f"TUYA_API_REGION={region!r} is not a known data centre. Valid codes:",
               file=sys.stderr)
+        for code, label in REGIONS.items():
+            print(f"  {code:<5} {label}", file=sys.stderr)
         return 2
 
     import tinytuya
 
-    print(f"querying Tuya Cloud (region {region})...")
+    print(f"querying Tuya Cloud ({REGIONS[region]} data centre)...")
     cloud = tinytuya.Cloud(
         apiRegion=region,
         apiKey=os.environ["TUYA_API_KEY"].strip(),
