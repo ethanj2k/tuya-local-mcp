@@ -46,13 +46,33 @@ No output? See [Troubleshooting discovery](#troubleshooting-discovery) — on Wi
 1. Create an account at [iot.tuya.com](https://iot.tuya.com).
 2. **Cloud → Development → Create Cloud Project.** Pick the data centre matching your region and "Smart Home" as the industry.
 3. In the project, **Devices → Link App Account** and scan the QR code with the Smart Life / Tuya Smart app. This imports the devices you already own.
-4. Run the wizard and paste in the project's Access ID and Access Secret:
+4. Grab one device's **Virtual ID** from the app: tap the device → pencil icon → *Device Information*. tinytuya needs one id to bootstrap the list.
+5. Fetch the keys. Either the stock interactive wizard:
 
 ```bash
 python -m tinytuya wizard
 ```
 
-This writes `devices.json` (your devices, with keys) and `snapshot.json` (the same, plus current IPs). **Both contain secrets — never commit them.** This repo's `.gitignore` already excludes them.
+…or the non-interactive fetcher bundled here, which takes the same inputs from a `.env` file. Useful in containers, CI, or anywhere a prompt is awkward:
+
+```bash
+cp .env.example .env    # fill in the four values
+python scripts/fetch_keys.py
+```
+
+```
+querying Tuya Cloud (region us)...
+cloud returned 6 device(s), 6 with a local key
+listening 20s for LAN addresses (transmitting nothing)...
+matched 6 device(s) to a LAN address
+
+wrote devices.json  (contains local keys - do not commit)
+
+  Living Room Lamp             192.168.1.50    v3.3  key=yes
+  Desk Plug                    192.168.1.51    v3.4  key=yes
+```
+
+Either way you end up with `devices.json`. **It contains your local keys — never commit it.** This repo's `.gitignore` already excludes it, along with `.env`.
 
 ### 3. Point the server at the file
 
@@ -110,21 +130,36 @@ Set `TUYA_READ_ONLY=1` and every write tool refuses. Discovery and status reads 
 
 If `passive_scan.py` hears nothing, work down this list before concluding the devices are offline.
 
-**Windows: firewall rules are per-executable.** This one is easy to lose an hour to. Windows Firewall allows inbound traffic per *program path*, so if you previously allowed `C:\...\Python310\python.exe`, a virtualenv's `.venv\Scripts\python.exe` is a completely different program and its inbound UDP is silently dropped — no prompt, no error, just an empty scan. The same script will find devices on one interpreter and nothing on the other.
+**Windows: allow the _base_ interpreter, not the venv one.** This is the single easiest thing to lose an hour to, and the obvious fix is the wrong one.
 
-Check which interpreters are allowed:
+Windows Firewall allows inbound traffic per *program path*. A venv's `Scripts\python.exe` on Windows is only a shim — the process that actually binds the socket is the base interpreter it was created from. So a rule naming `.venv\Scripts\python.exe` matches nothing, and your scan stays empty with no prompt and no error.
+
+Confirm the real image path of whatever interpreter you're running:
+
+```powershell
+.\.venv\Scripts\python.exe -c "import ctypes,sys; b=ctypes.create_unicode_buffer(1024); ctypes.windll.kernel32.GetModuleFileNameW(None,b,1024); print('reported:',sys.executable); print('actual  :',b.value)"
+```
+
+```
+reported: C:\...\project\.venv\Scripts\python.exe
+actual  : C:\Users\you\AppData\Local\Programs\Python\Python313\python.exe
+```
+
+Write the rule against the **actual** path (elevated PowerShell):
+
+```powershell
+New-NetFirewallRule -DisplayName "Tuya LAN discovery" -Direction Inbound `
+  -Program "C:\Users\you\AppData\Local\Programs\Python\Python313\python.exe" `
+  -Protocol UDP -LocalPort 6666,6667,7000 -Action Allow
+```
+
+Because the rule lands on the base interpreter, it applies to every venv built from that install — convenient, but worth knowing you're opening those ports for all of them.
+
+To see which interpreters are already allowed:
 
 ```powershell
 Get-NetFirewallApplicationFilter | Where-Object { $_.Program -like '*python*' } |
   ForEach-Object { $_.Program }
-```
-
-Add a rule for the interpreter you're actually running (elevated PowerShell):
-
-```powershell
-New-NetFirewallRule -DisplayName "Tuya LAN discovery" -Direction Inbound `
-  -Program "C:\path\to\.venv\Scripts\python.exe" `
-  -Protocol UDP -LocalPort 6666,6667,7000 -Action Allow
 ```
 
 Note this only affects *discovery*. Device control is outbound TCP on port 6668 and works fine without any inbound rule — so a blocked scan does not mean a broken install. If your registry already has current IPs, everything else works.
