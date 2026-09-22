@@ -180,7 +180,11 @@ Note this only affects *discovery*. Device control is outbound TCP on port 6668 
 
 **Datapoint numbering is per-product.** The bulb helpers cover the two common layouts (datapoints 1–5 on older bulbs, 20–24 on newer). For anything else, `get_status` shows the raw datapoints and `set_datapoint` writes them.
 
-**Discovery is best-effort.** Beacons are periodic, so a short listen window may miss devices that are simply between broadcasts. Increase the timeout rather than concluding a device is offline.
+**Discovery is best-effort.** Beacons are periodic, so a short listen window may miss devices that are simply between broadcasts. Increase the timeout rather than concluding a device is offline. A 20-second scan and a 75-second scan of the same network can differ by several devices.
+
+**Zigbee and BLE sub-devices are not locally controllable by this server.** Your cloud account will list them, and `fetch_keys.py` will happily write them into `devices.json`, but they have no IP of their own — they're reached by routing a command through their gateway using `node_id`. That routing isn't implemented here. They're identifiable by a `node_id` or `gateway_id` field; `scripts/inspect_registry.py` separates them out for you.
+
+**A device switched off at the wall is invisible.** It can't broadcast, so it gets no IP and can't be controlled — local control has no cloud fallback to hide this. This is the normal reason a cloud account lists far more devices than the scan finds, and it isn't a fault. Run `scripts/inspect_registry.py` to see which entries actually have an address.
 
 ## Development
 

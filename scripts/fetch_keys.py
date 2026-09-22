@@ -9,7 +9,9 @@ merges in LAN addresses from a passive scan.
     TUYA_API_KEY        Access ID       from iot.tuya.com -> project -> Overview
     TUYA_API_SECRET     Access Secret   same place
     TUYA_API_REGION     data centre code, see REGIONS below
-    TUYA_API_DEVICE_ID  any device's Virtual ID, from the Smart Life app
+    TUYA_API_DEVICE_ID  optional. Any device's Virtual ID from the Smart Life
+                        app. Only needed for the legacy per-user lookup; left
+                        unset, the project-wide device endpoint is used instead.
 
 Usage:
     python scripts/fetch_keys.py [--out devices.json] [--no-scan] [--scan-seconds 20]
@@ -26,7 +28,7 @@ import os
 import sys
 from pathlib import Path
 
-REQUIRED = ("TUYA_API_KEY", "TUYA_API_SECRET", "TUYA_API_REGION", "TUYA_API_DEVICE_ID")
+REQUIRED = ("TUYA_API_KEY", "TUYA_API_SECRET", "TUYA_API_REGION")
 
 # Mirrors tinytuya.Cloud.setregion, including its short aliases. The region must
 # match the data centre your *app account* lives in, which is decided by the
@@ -86,11 +88,12 @@ def main() -> int:
     import tinytuya
 
     print(f"querying Tuya Cloud ({REGIONS[region]} data centre)...")
+    device_id = (os.environ.get("TUYA_API_DEVICE_ID") or "").strip()
     cloud = tinytuya.Cloud(
         apiRegion=region,
         apiKey=os.environ["TUYA_API_KEY"].strip(),
         apiSecret=os.environ["TUYA_API_SECRET"].strip(),
-        apiDeviceID=os.environ["TUYA_API_DEVICE_ID"].strip(),
+        apiDeviceID=device_id or None,
     )
 
     devices = cloud.getdevices()
